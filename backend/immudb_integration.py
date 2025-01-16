@@ -1,20 +1,38 @@
 
-import immudb
-from immudb.client import ImmudbClient
+# Immudb Integration
+import immudb.client
+import requests
 
-def connect_to_immudb():
-    client = ImmudbClient()
-    client.connect('2bf985f6bc3412ca90de78c00002ecaf.r2.cloudflarestorage.com', 3322)
-    client.login('admin', 'SqnVMNvjSXpDN9YCR_vf-cqlnsKjZAcJ4SrfEi5u')
-    return client
+# IPFS API Endpoint
+IPFS_API_URL = "http://localhost:5001/api/v0"
 
-def store_data(client, key, value):
-    client.set(key, value)
+# Immudb client setup
+immu_client = immudb.client.ImmuClient()
+immu_client.login(username="immudb", password="immudb")
 
-def retrieve_data(client, key):
-    return client.get(key)
+# Write to Immudb
+def write_to_immudb(key, value):
+    response = immu_client.set(key, value)
+    return response
 
-if __name__ == "__main__":
-    client = connect_to_immudb()
-    store_data(client, 'test_key', 'test_value')
-    print(retrieve_data(client, 'test_key'))
+# Read from Immudb
+def read_from_immudb(key):
+    response = immu_client.get(key)
+    return response
+
+# Write to IPFS
+def write_to_ipfs(data):
+    files = {"file": ("data.txt", data)}
+    response = requests.post(f"{IPFS_API_URL}/add", files=files)
+    return response.json()
+
+# Read from IPFS
+def read_from_ipfs(cid):
+    response = requests.get(f"{IPFS_API_URL}/cat?arg={cid}")
+    return response.text
+
+# Example: Archiving Immudb data to IPFS
+def archive_immudb_to_ipfs(key):
+    value = read_from_immudb(key).value.decode()
+    ipfs_response = write_to_ipfs(value)
+    return ipfs_response["Hash"]

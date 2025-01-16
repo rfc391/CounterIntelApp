@@ -1,35 +1,46 @@
 
+# OpenCV Automation with ONNX and NVIDIA Triton
 import cv2
+import numpy as np
+import onnxruntime as ort
 
-def detect_objects(image_path, model_path, config_path, classes_path):
-    # Load YOLO model
-    net = cv2.dnn.readNet(model_path, config_path)
-    layer_names = net.getLayerNames()
-    output_layers = [layer_names[i - 1] for i in net.getUnconnectedOutLayers()]
-    
-    # Load class names
-    with open(classes_path, 'r') as f:
-        classes = [line.strip() for line in f.readlines()]
+# NVIDIA Triton HTTP Client
+from tritonclient.http import InferenceServerClient
 
-    # Load image
+# OpenCV setup
+def process_image(image_path):
     image = cv2.imread(image_path)
-    height, width, channels = image.shape
+    gray = cv2.cvtColor(image, cv2.COLOR_BGR2GRAY)
+    edges = cv2.Canny(gray, 50, 150)
+    return edges
 
-    # Create blob and detect objects
-    blob = cv2.dnn.blobFromImage(image, 0.00392, (416, 416), (0, 0, 0), True, crop=False)
-    net.setInput(blob)
-    detections = net.forward(output_layers)
+# ONNX Inference
+def run_onnx_model(onnx_model_path, input_data):
+    session = ort.InferenceSession(onnx_model_path)
+    input_name = session.get_inputs()[0].name
+    output_name = session.get_outputs()[0].name
+    result = session.run([output_name], {input_name: input_data})
+    return result
 
-    # Process detections
-    for detection in detections:
-        for object_detected in detection:
-            scores = object_detected[5:]
-            class_id = scores.argmax()
-            confidence = scores[class_id]
-            if confidence > 0.5:
-                center_x = int(object_detected[0] * width)
-                center_y = int(object_detected[1] * height)
-                print(f"Detected {classes[class_id]} with confidence {confidence:.2f} at ({center_x}, {center_y})")
+# NVIDIA Triton Inference
+def run_triton_inference(server_url, model_name, input_data):
+    client = InferenceServerClient(url=server_url)
+    inputs = [{"name": "INPUT", "shape": input_data.shape, "datatype": "FP32", "data": input_data.tolist()}]
+    outputs = [{"name": "OUTPUT"}]
+    result = client.infer(model_name=model_name, inputs=inputs, outputs=outputs)
+    return result.as_numpy("OUTPUT")
 
+# Example usage
 if __name__ == "__main__":
-    detect_objects("sample.jpg", "yolov3.weights", "yolov3.cfg", "coco.names")
+    # Example OpenCV processing
+    edges = process_image("example.jpg")
+    cv2.imwrite("edges.jpg", edges)
+
+    # Example ONNX model inference
+    input_data = np.random.rand(1, 3, 224, 224).astype(np.float32)  # Dummy data
+    onnx_result = run_onnx_model("model.onnx", input_data)
+    print("ONNX Result:", onnx_result)
+
+    # Example Triton inference
+    triton_result = run_triton_inference("http://localhost:8000", "my_model", input_data)
+    print("Triton Result:", triton_result)
