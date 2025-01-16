@@ -2,7 +2,7 @@
 # CounterIntelApp
 
 ## Overview
-CounterIntelApp is a military-grade, DARPA-aligned application designed for secure operational coordination, advanced signal processing, and real-time intelligence. This platform leverages cutting-edge technologies in AI, cryptography, and decentralized systems to ensure seamless and secure communication.
+CounterIntelApp is a Flutter-based mobile application designed to enhance counter-intelligence operations. It provides tools for surveillance detection, anti-tracking measures, and evidence collection, ensuring user data is protected and threats are neutralised.
 
 ## Key Features
 - **Event-Driven Architecture**: Powered by Kafka and RabbitMQ for scalable data processing.
